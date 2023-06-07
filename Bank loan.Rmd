@@ -1,0 +1,51 @@
+---
+title: "bankloan"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidymodels)
+library(tidyverse)
+library(GGally)
+```
+
+## Multiple Linear Regression on Bank Loans
+This project implements a MLR model checking the relationship between loan assigned to customers against explanatory variables including annual income, monthly debt and credit score
+```{r load_data}
+df <- read.csv("credit_test.csv")
+
+#get columns required
+selected_cols <- df[, c("Current.Loan.Amount", "Credit.Score", "Annual.Income","Monthly.Debt","Term")]
+# Rename the columns to avoid having dots
+colnames(selected_cols) <- c("LoanAmount", "CreditScore", "AnnualIncome", "MonthlyDebt", "Term")
+# Replace text values with 1 for "short term" and 2 for "long term" in the "Term" column
+selected_cols$Term <- ifelse(selected_cols$Term == "Short Term", 1, 2)
+selected_cols
+```
+
+## Task 2: Overall model - is at least one predictor useful?
+One predictor is not sufficient in determining the behavior of a certain parameter used in explaining a specific phenomenon.
+
+```{r}
+data <- selected_cols 
+# review any visual patterns
+  data %>% 
+    select(LoanAmount, Term, AnnualIncome) %>% 
+    ggpairs()
+
+  #fit the mlr model
+  lm_spec <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+  mlr_mod <- lm_spec %>% 
+  fit(LoanAmount ~ Term + AnnualIncome, data = data)
+
+  tidy(mlr_mod)
+```
+
