@@ -6,3 +6,123 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+
+```{r get_libraries}
+library(dplyr)
+library(ggplot2)
+library(tidymodels)
+library(tidyverse)
+library(GGally)
+```
+
+```{r load_data}
+df <- read.csv("../credit_test.csv")
+```
+```{r}
+df
+```
+```{r}
+
+#remove some rows where home ownership is missing
+df_cleaned <- df[complete.cases(df$Home.Ownership), ]
+df_cleaned
+```
+
+```{r get_selected_columns}
+#get columns required
+selected_cols <- df[, c("Current.Loan.Amount", "Credit.Score", "Annual.Income","Monthly.Debt","Term")]
+# Rename the columns to avoid having dots
+colnames(selected_cols) <- c("LoanAmount", "CreditScore", "AnnualIncome", "MonthlyDebt", "Term")
+# Replace text values with 1 for "short term" and 2 for "long term" in the "Term" column
+selected_cols$Term <- ifelse(selected_cols$Term == "Short Term", 1, 2)
+
+
+#fill NA values with 0s
+selected_cols[is.na(selected_cols)] <- 0 #the NA values were specifically filled for Annual income, because the customers still have a higher credit score and loan assigned to them. 
+selected_cols
+```
+**One quantitative explanatory variable and one qualitative explanatory variable.**
+##Task 2: Overall model - is at least one predictor useful? 
+In this case the selected response variables in the loan amaount, the quantitative explanatory variable is Annual income and the qualitative explanatory variable is Term of the loan.
+
+```{r fit_model}
+data <- selected_cols
+# review any visual patterns
+  data %>% 
+    select(LoanAmount, Term, AnnualIncome) %>% 
+    ggpairs()
+
+  #fit the mlr model
+  lm_spec <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+  mlr_mod <- lm_spec %>% 
+  fit(LoanAmount ~ Term + AnnualIncome, data = data)
+
+  tidy(mlr_mod)
+```
+The explanatory variables are not correlated meaning that they play a critical role in predicting the amount of loan awarded to customers. 
+
+1.  What is the label that R assigned to this explanatory variable
+    `term`? The same label : Term
+2.  What information is represented here? - 
+3.  What information is missing here? -
+
+4.  For each level of your qualitative variable, write the simplified
+    equation of the estimated line for that level. Note that if your
+    qualitative variable has two levels, you should have two simplified
+    equations.
+    **Loan = 3.98A + 1.44 - level 1**
+    **Loan = 3.98A - 5.73T + 1.44 - level 2**
+    
+5.  Interpret the parameter estimate for the reference level of your
+    categorical variable in the context of your problem. Page 83 of the
+    text can help here (or have me come chat with you).
+    __for level 1 (3.98A), it could be interpreted as the average loan amount awarded to customers for short term loans while the second level shows the average loan amount for customers seeking long term loans (3.98A - 5.73T). Finally for -5.73T, this can be interpreted as the average loan amount for short and long term loan seekers__
+    
+
+6.  Interpret the parameter estimate for your quantitative variable in
+    the context of your problem.
+    __3.98 represents the rate at which the initial amount was multiplied by before customers are awared loans, or 3.98 is the interest rate for loans __
+    
+7.  Create a new model with the same response and quantitative
+    explanatory variable, but now choose a qualitative variable with
+    more than two (but, say, less than 5) levels and obtain the `tidy`
+    model output. How does R appear to handle categorical variables with
+    more than two levels?
+    
+    
+```{r}
+# Get unique values of the home ownership - second qualitative variable
+#unique_values <- unique(df[, 8])
+# Recode values using ifelse
+#select columns for new model
+selected_cols1 <- df[, c("Current.Loan.Amount", "Home.Ownership","Credit.Score", "Annual.Income","Monthly.Debt","Term")]
+# Rename the columns to avoid having dots
+colnames(selected_cols1) <- c("LoanAmount", "HomeOwnership","CreditScore", "AnnualIncome", "MonthlyDebt", "Term")
+selected_cols1$HomeOwnership <- ifelse(selected_cols1$HomeOwnership == "Own Home", 1, 2:4)
+selected_cols1
+
+```
+```{r new_model}
+#Create new model with different qualitative variable
+data1 <- selected_cols1
+# review any visual patterns
+  data1 %>% 
+    select(LoanAmount, HomeOwnership, AnnualIncome) %>% 
+    ggpairs()
+
+  #fit the mlr model
+  lm_spec1 <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+  mlr_mod1 <- lm_spec1 %>% 
+  fit(LoanAmount ~ HomeOwnership + AnnualIncome, data = data1)
+
+  tidy(mlr_mod1)
+```
+
+For the new model, still the qualitative and quantitative variables do not seem to be correlated, and as a result, it can be interpreted that the final loan amount is also determined by the type of home ownership of the customers. 
